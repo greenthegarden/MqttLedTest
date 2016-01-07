@@ -120,6 +120,21 @@ void mqtt_connect()
   }
 }
 
+boolean mqtt_reconnect() {
+  DEBUG_LOG(1, "connecting to broker");
+  if (mqtt_client.connect(mqtt_client_id)) {
+    DEBUG_LOG(1, "  connected");
+    publish_connected();
+#if USE_FREEMEM
+    publish_memory();
+#endif
+    // subscribe to topics
+    mqtt_client.subscribe("relayduino/request/#");
+    mqtt_client.subscribe("relayduino/control/#");
+  }
+  return mqtt_client.connected();
+}
+
 
 /*--------------------------------------------------------------------------------------
   setup()
@@ -131,17 +146,10 @@ void setup()
 
   // Configure Ethernet
   Ethernet.begin(mac, ip);
-
-#if USE_HARDWARE_WATCHDOG
-  ResetWatchdog1();
-#endif
-
-  //#if DEBUG
-  //Serial.println(WiFly.ip());
-  //  Serial.println(WiFly.getMAC());
-  //#endif
-
+  delay(1500);
+  
   pinMode(LED_PIN, OUTPUT);
+  setLedOff();
 }
 
 
@@ -157,7 +165,7 @@ void loop()
   //  if (!mqtt_client.loop()) {
   //    mqtt_connect();
   //  }
-
+#if 0
   // alternative based on code in relayr
   if (mqtt_client.connected()) {
     mqtt_client.loop();
@@ -165,16 +173,21 @@ void loop()
     //if connection lost, try to reconnect
     mqtt_connect();
   }
-
-#if USE_HARDWARE_WATCHDOG
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - previousMillis >= watchdog_interval) {
-    // save the last time you blinked the LED
-    previousMillis = currentMillis;
-
-    ResetWatchdog1();
-  }
 #endif
+  
+  if (!mqtt_client.connected()) {
+    long now = millis();
+    if (now - lastReconnectAttempt > 5000) {
+      lastReconnectAttempt = now;
+      // Attempt to reconnect
+      if (mqtt_reconnect()) {
+        lastReconnectAttempt = 0;
+      }
+    }
+  } else {
+    // Client connected
+    mqtt_client.loop();
+  }
+  
 }
 

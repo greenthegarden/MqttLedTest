@@ -57,10 +57,10 @@ url = urlparse.urlparse(url_str)
 mqttc.connect(url.hostname, url.port)
 mqttc.loop_start()
 
-command_types_valid_inputs = ['t', 'm']
+command_types_valid_inputs = ['t', 'm', 'l']
 led_control_valid_inputs   = ['0', '1']
 
-print("Enter 't' for uptime or 'm' for free memory: ")
+print("Enter 't' for uptime, 'm' for free memory, or 'l' to control LED: ")
 
 # Loop continuously
 while True :
@@ -71,7 +71,7 @@ while True :
 				mqttc.publish("relayduino/request/uptime");
 			elif command_type is 'm' :
 				mqttc.publish("relayduino/request/memory");
-			elif command_type is 'm' :
+			elif command_type is 'l' :
 				led_control = raw_input("Enter 0/1 to switch off/on led: ")
 				if led_control in led_control_valid_inputs :
 					mqttc.publish("relayduino/control/led", led_control);
