@@ -1,5 +1,5 @@
-#ifndef MQTTWIFLYRELAYDUINO_CONFIG_H_
-#define MQTTWIFLYRELAYDUINO_CONFIG_H_
+#ifndef MQTTLEDTEST_CONFIG_H_
+#define MQTTLEDTEST_CONFIG_H_
 
 
 #define DEBUG                       true
@@ -11,6 +11,9 @@
 
 // Macros
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
+
+const int AFTER_ERROR_DELAY       = 1000;
 
 
 // Serial parameters
@@ -52,8 +55,8 @@ void setLedOff()
 #include "networkConfig.h"
 
 
-// WiFly configuration
-#include "wifly_config.h"
+// Ethernet configuration
+#include "ethernet_config.h"
 
 
 // MQTT configuration

@@ -1,21 +1,10 @@
-// WiFly libraries
+// Ethernet libraries
 #include <SPI.h>
-#include <WiFly.h>
-#include <SoftwareSerial.h>
-
+#include <Ethernet.h>
 
 #include "config.h"
 
 #include <MemoryFree.h>
-
-
-//#if DEBUG
-//void debug(const __FlashStringHelper * console_text)
-//{
-//  Serial.println(console_text);
-//}
-//#endif
-
 
 #include <PubSubClient.h>
 
@@ -25,7 +14,7 @@
 void callback(char* topic, uint8_t* payload, unsigned int length);
 
 
-PubSubClient   mqtt_client(mqtt_server_addr, MQTT_PORT, callback, wifly_client);
+PubSubClient   mqtt_client(mqtt_server_addr, MQTT_PORT, callback, ethernet_client);
 
 
 void publish_connected()
@@ -65,8 +54,8 @@ void callback(char* topic, uint8_t* payload, unsigned int payload_length)
    	  length = the length of the payload, until which index of payload
   */
 
-DEBUG_LOG(1, "Payload length is");
-DEBUG_LOG(1, payload_length);
+  DEBUG_LOG(1, "Payload length is");
+  DEBUG_LOG(1, payload_length);
 
   // Copy the payload to the new buffer
   char* message = (char*)malloc((sizeof(char) * payload_length) + 1); // get the size of the bytes and store in memory
@@ -89,21 +78,21 @@ DEBUG_LOG(1, payload_length);
     }
   }
   DEBUG_LOG(1, "Control topic index");
-//  DEBUG_LOG(1, topic_idx);
+  //  DEBUG_LOG(1, topic_idx);
 
   if (topic_idx == 0) {  // topic is UPTIME_REQUEST
     publish_uptime();
     DEBUG_LOG(1, "UPTIME_REQUEST topic arrived");
-//    DEBUG_LOG(1, (char) millis());
+    //    DEBUG_LOG(1, (char) millis());
   } else if (topic_idx == 1) {  // topic is MEMORY_REQUEST
     publish_memory();
     DEBUG_LOG(1, "MEMORY_REQUEST topic arrived");
-//    DEBUG_LOG(1, (char) freeMemory());
+    //    DEBUG_LOG(1, (char) freeMemory());
   } else if (topic_idx == 2) {  // LED_CONTROL
     byte integer = atoi(message);    // parse to int (will return 0 if not a valid int)
     if (integer == 1 && ledIsOff()) {
       setLedOn();
-    } else if (integer == 0 && ledIsOn()) { 
+    } else if (integer == 0 && ledIsOn()) {
       setLedOff();
     }
   }
@@ -112,58 +101,25 @@ DEBUG_LOG(1, payload_length);
   free(message);
 }
 
-void wifly_connect()
-{
-  DEBUG_LOG(1, "initialising wifly");
-
-  WiFly.begin();
-  delay(5000);  // allow time to WiFly to initialise
-
-  DEBUG_LOG(1, "joining network");
-
-//  if (!WiFly.join(MY_SSID, MY_PASSPHRASE, mode)) {
-  if (!WiFly.join(MY_SSID)) {   // needs to be fixed to allow a passphrase if secure
-    wifly_connected = false;
-    DEBUG_LOG(1, "  failed");
-    delay(AFTER_ERROR_DELAY);
-  } else {
-    wifly_connected = true;
-    DEBUG_LOG(1, "  connected");
-  }
-}
 
 void mqtt_connect()
 {
-  if (!wifly_connected)
-    wifly_connect();
-
-  if (wifly_connected) {
-    // MQTT client setup
-    //    mqttClient.disconnect();
-    DEBUG_LOG(1, "connecting to broker");
-    if (mqtt_client.connect(mqtt_client_id)) {
-      DEBUG_LOG(1, "  connected");
-      publish_connected();
+  DEBUG_LOG(1, "connecting to broker");
+  if (mqtt_client.connect(mqtt_client_id)) {
+    DEBUG_LOG(1, "  connected");
+    publish_connected();
 #if USE_FREEMEM
-      publish_memory();
+    publish_memory();
 #endif
-      // subscribe to topics
-      mqtt_client.subscribe("relayduino/request/#");
-      mqtt_client.subscribe("relayduino/control/#");
-    } else {
-      DEBUG_LOG(1, "  failed");
-      delay(AFTER_ERROR_DELAY);
-    }
+    // subscribe to topics
+    mqtt_client.subscribe("relayduino/request/#");
+    mqtt_client.subscribe("relayduino/control/#");
+  } else {
+    DEBUG_LOG(1, "  failed");
+    delay(AFTER_ERROR_DELAY);
   }
 }
 
-void reset_connection()
-{
-  if (mqtt_client.connected())
-    mqtt_client.disconnect();
-  wifly_connect();
-  mqtt_connect();
-}
 
 /*--------------------------------------------------------------------------------------
   setup()
@@ -171,22 +127,19 @@ void reset_connection()
   --------------------------------------------------------------------------------------*/
 void setup()
 {
-  // Configure WiFly
   Serial.begin(BAUD_RATE);
 
-  wifly_serial.begin(BAUD_RATE);
-  WiFly.setUart(&wifly_serial);
-
-  wifly_connect();
+  // Configure Ethernet
+  Ethernet.begin(mac, ip);
 
 #if USE_HARDWARE_WATCHDOG
   ResetWatchdog1();
 #endif
 
-//#if DEBUG
+  //#if DEBUG
   //Serial.println(WiFly.ip());
   //  Serial.println(WiFly.getMAC());
-//#endif
+  //#endif
 
   pinMode(LED_PIN, OUTPUT);
 }
